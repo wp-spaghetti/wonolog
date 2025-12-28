@@ -1,0 +1,71 @@
+{
+  "name": "wp-spaghetti/wonolog",
+  "description": "",
+  "license": "GPL-3.0-or-later",
+  "type": "wordpress-plugin",
+  "keywords": [
+    "wordpress",
+    "logger",
+    "logging",
+    "monolog",
+    "wonolog",
+    "psr-3"
+  ],
+  "authors": [
+    {
+      "name": "Frugan",
+      "email": "dev@frugan.it",
+      "homepage": "https://github.com/frugan-dev",
+      "role": "Developer"
+    }
+  ],
+  "homepage": "https://github.com/wp-spaghetti/wonolog",
+  "support": {
+    "issues": "https://github.com/wp-spaghetti/wonolog/issues",
+    "source": "https://github.com/wp-spaghetti/wonolog",
+    "docs": "https://github.com/wp-spaghetti/wonolog#readme"
+  },
+  "funding": [
+    {
+      "type": "custom",
+      "url": "https://buymeacoff.ee/frugan"
+    }
+  ],
+  "require": {
+    "php": ">=8.1",
+    "afragen/git-updater-lite": "*",
+    "wp-spaghetti/wp-env": "^2.2"
+  },
+  "require-dev": {
+    "ergebnis/composer-normalize": "^2.48",
+    "friendsofphp/php-cs-fixer": "^3.89",
+    "rector/rector": "^2.2",
+    "wpify/scoper": "^3.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "WpSpaghetti\\Wonolog\\": "src/"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "ergebnis/composer-normalize": true,
+      "wpify/scoper": true
+    },
+    "sort-packages": true
+  },
+  "extra": {
+    "wpify-scoper": {
+      "folder": "vendor-deps",
+      "prefix": "WpSpaghetti\\Deps"
+    }
+  },
+  "scripts": {
+    "lint": "@lint:fix --dry-run",
+    "lint:fix": "@php -d max_execution_time=0 -d memory_limit=-1 -f ./vendor/bin/php-cs-fixer fix --diff --using-cache=no",
+    "rector": "@rector:fix --dry-run",
+    "rector:fix": "@php -d max_execution_time=0 -d memory_limit=-1 -f ./vendor/bin/rector -- process --ansi --clear-cache",
+    "rector:safe": "@rector:safe:fix --dry-run",
+    "rector:safe:fix": "@php -d max_execution_time=0 -d memory_limit=-1 -f ./vendor/bin/rector -- process --ansi --clear-cache --config rector-safe.php"
+  }
+}

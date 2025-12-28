@@ -1,0 +1,7 @@
+{
+  "require": {
+    "inpsyde/wonolog": "^3.0",
+    "thecodingmachine/safe": "^3.3",
+    "wecodemore/wordpress-early-hook": "^1.1.0"
+  }
+}

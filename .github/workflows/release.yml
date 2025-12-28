@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - 'support/*'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+  checks: write
+  repository-projects: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, 'skip ci')"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          # Use a personal access token or GitHub App token with bypass permissions
+          token: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v6
+        id: semantic
+        with:
+          # https://github.com/semantic-release/commit-analyzer/issues/65
+          # https://github.com/romap0/semantic-release-unsquash/issues/7
+          extra_plugins: |
+            @semantic-release/commit-analyzer@latest
+            @semantic-release/release-notes-generator@latest
+            @semantic-release/changelog@latest
+            @semantic-release/git@latest
+            @semantic-release/github@latest
+            conventional-changelog-conventionalcommits@latest
+        env:
+          # Use the token with bypass permissions
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
+
+      - name: Setup PHP
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
+      - name: Install Composer dependencies
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          # Install with dev dependencies to generate vendor-deps via wpify/scoper
+          composer install --optimize-autoloader --no-interaction
+          # Remove dev dependencies but keep vendor-deps folder already generated
+          composer install --optimize-autoloader --classmap-authoritative --no-dev --no-interaction
+
+      - name: Create version WITH Git Updater Lite
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          echo "Creating version WITH Git Updater Lite for Composer installations"
+          mkdir -p build/wonolog
+          rsync -av --exclude-from=exclude.txt --include-from=include.txt ./ build/wonolog/
+          cd build/wonolog
+          zip -qr ../wonolog--with-git-updater.zip .
+          cd ../..
+
+      - name: Remove Git Updater Lite for WordPress.org compliance
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          echo "Removing git-updater-lite dependency for WordPress compliance"
+          composer remove afragen/git-updater-lite --update-no-dev --optimize-autoloader --classmap-authoritative --no-interaction
+
+      - name: Create version WITHOUT Git Updater Lite from updated root
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          echo "Creating clean copy from root with updated composer.json"
+          rm -rf build/wonolog
+          mkdir -p build/wonolog
+          rsync -av --exclude-from=exclude.txt --include-from=include.txt ./ build/wonolog/
+
+      - name: Remove Update URI header for WordPress compliance
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          echo "Removing Update URI header for WordPress compliance"
+          sed -i '/\* Update URI:/d' build/wonolog/wonolog.php
+
+      - name: Create version WITHOUT Git Updater Lite
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          echo "Creating standard version WITHOUT Git Updater Lite for WordPress.org"
+          cd build/wonolog
+          zip -qr ../wonolog.zip .
+          cd ../..
+
+      - name: Create Release
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          # https://github.com/softprops/action-gh-release
+          # Note that if you intend to run workflows on the release event (on: { release: { types: [published] } }),
+          # you need to use a personal access token for this action, as the default secrets.GITHUB_TOKEN does not trigger another workflow.
+          # See: https://github.com/actions/create-release/issues/71
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: v${{ steps.semantic.outputs.new_release_version }}
+          files: |
+            build/wonolog.zip
+            build/wonolog--with-git-updater.zip
+          generate_release_notes: true
