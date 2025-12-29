@@ -20,6 +20,13 @@ declare(strict_types=1);
  */
 function customize_php_scoper_config(array $config): array
 {
+    // Remove namespace prefix from constants in defined() calls
+    $config['patchers'][] = static fn (string $filePath, string $prefix, string $content): string => str_replace(
+        sprintf("defined('%s\\", $prefix),
+        "defined('",
+        $content
+    );
+
     // Add a patcher to restore original Rector namespaces in rector-migrate.php files
     // These files are configuration files for Rector and must use non-scoped Rector classes
     $config['patchers'][] = static function (string $filePath, string $prefix, string $content): string {
