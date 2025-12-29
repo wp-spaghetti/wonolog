@@ -24,7 +24,9 @@ use WpSpaghetti\Deps\Monolog\Handler\DeduplicationHandler;
 use WpSpaghetti\Deps\Monolog\Handler\ErrorLogHandler;
 use WpSpaghetti\Deps\Monolog\Handler\NativeMailerHandler;
 use WpSpaghetti\Deps\Monolog\Handler\RotatingFileHandler;
+use WpSpaghetti\Deps\Monolog\LogRecord;
 use WpSpaghetti\Deps\Monolog\Processor\PsrLogMessageProcessor;
+use WpSpaghetti\Deps\Vectorface\Whip\Whip;
 use WpSpaghetti\WpEnv\Environment;
 
 use function WpSpaghetti\Deps\Safe\error_log;
@@ -91,35 +93,30 @@ class Bootstrap
     /**
      * Add extra context to log records.
      *
-     * @param array $record The log record
+     * @param array|LogRecord $record The log record
      *
-     * @return array Modified log record with extra context
+     * @return array|LogRecord Modified log record with extra context
      */
-    public function addExtraContext(array $record): array
+    public function addExtraContext(array|LogRecord $record): array|LogRecord
     {
         try {
-            $record['extra']['hostname'] = gethostname(); // php_uname('n')
+            $hostname = gethostname(); // php_uname('n')
         } catch (\Exception) {
-            $record['extra']['hostname'] = null;
+            $hostname = null;
         }
 
-        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
-        if ($ip) {
+        $ipData = $this->getClientIp();
+        $hostbyaddr = null;
+        if ('0.0.0.0' !== $ipData['ip']) {
             try {
-                $record['extra']['hostbyaddr'] = gethostbyaddr($ip);
+                $hostbyaddr = gethostbyaddr($ipData['ip']);
             } catch (\Exception) {
-                $record['extra']['hostbyaddr'] = null;
+                $hostbyaddr = null;
             }
         }
 
-        $record['extra']['_REQUEST'] = $_REQUEST;
-        $record['extra']['_POST'] = $_POST;
-        $record['extra']['_FILES'] = $_FILES;
-        $record['extra']['_SESSION'] = $_SESSION ?? null;
-
         $sensitivePatterns = $this->getSensitivePatterns();
-
-        $record['extra']['_SERVER'] = array_filter(
+        $filteredServer = array_filter(
             $_SERVER,
             static fn ($key): bool => !array_reduce(
                 $sensitivePatterns,
@@ -128,6 +125,34 @@ class Bootstrap
             ),
             ARRAY_FILTER_USE_KEY
         );
+
+        $extraData = [
+            'client_ip' => $ipData['ip'],
+            'client_ip_source' => $ipData['source'],
+            'hostname' => $hostname,
+            'hostbyaddr' => $hostbyaddr,
+            '_REQUEST' => $_REQUEST,
+            '_POST' => $_POST,
+            '_FILES' => $_FILES,
+            '_SESSION' => $_SESSION ?? null,
+            '_SERVER' => $filteredServer,
+        ];
+
+        // Handle Monolog 3.x (LogRecord object)
+        if ($record instanceof LogRecord) {
+            foreach ($extraData as $key => $value) {
+                $record->extra[$key] = $value;
+            }
+
+            return $record;
+        }
+
+        // Handle Monolog 2.x (array)
+        if (!isset($record['extra']) || !\is_array($record['extra'])) {
+            $record['extra'] = [];
+        }
+
+        $record['extra'] = array_merge($record['extra'], $extraData);
 
         return $record;
     }
@@ -436,5 +461,219 @@ class Bootstrap
         ));
 
         return null;
+    }
+
+    /**
+     * Get client IP address using Vectorface/whip library.
+     *
+     * SECURITY: Whip validates that proxy headers come from trusted sources
+     * by checking if REMOTE_ADDR is in the configured whitelist.
+     *
+     * @return array{ip: string, source: string} IP address and detection source
+     */
+    private function getClientIp(): array
+    {
+        // CLI context
+        if (\PHP_SAPI === 'cli') {
+            return ['ip' => '0.0.0.0', 'source' => 'CLI'];
+        }
+
+        /**
+         * Filter IP detection methods using Whip bitmask.
+         *
+         * Default: ALL_METHODS (tries all methods in priority order)
+         * This is Whip's default and suitable for most cases.
+         *
+         * Available constants (combine with | operator):
+         * - Whip::REMOTE_ADDR: Direct connection IP
+         * - Whip::CLOUDFLARE_HEADERS: CF-Connecting-IP
+         * - Whip::INCAPSULA_HEADERS: Incap-Client-IP
+         * - Whip::PROXY_HEADERS: X-Forwarded-For, X-Real-IP, etc.
+         * - Whip::CUSTOM_HEADERS: Headers added via wonolog_ip_custom_headers
+         * - Whip::ALL_METHODS: All of the above (default)
+         *
+         * @param int $methods Bitmask of detection methods
+         */
+        $methods = apply_filters('wonolog_ip_detection_methods', Whip::ALL_METHODS);
+
+        if (!\is_int($methods)) {
+            $methods = Whip::ALL_METHODS;
+        }
+
+        /**
+         * Filter IP whitelists to validate proxy sources.
+         *
+         * This validates that REMOTE_ADDR (the connecting proxy) is trusted
+         * before accepting headers from that method.
+         *
+         * Example: Only accept CF-Connecting-IP if request comes from CloudFlare IPs
+         *
+         * Format:
+         * [
+         *     Whip::CLOUDFLARE_HEADERS => [
+         *         Whip::IPV4 => ['199.27.128.0/21', '173.245.48.0/20', ...],
+         *         Whip::IPV6 => ['2400:cb00::/32', '2606:4700::/32', ...]
+         *     ],
+         *     Whip::PROXY_HEADERS => [
+         *         Whip::IPV4 => ['10.0.1.1']  // Your load balancer IP
+         *     ]
+         * ]
+         *
+         * @param array<int, array<string, array<string>>> $whitelists IP ranges per method
+         */
+        $whitelists = apply_filters('wonolog_ip_whitelists', []);
+
+        if (!\is_array($whitelists)) {
+            $whitelists = [];
+        }
+
+        /**
+         * Filter custom headers for IP detection.
+         *
+         * These are used when Whip::CUSTOM_HEADERS is enabled.
+         * Header names without HTTP_ prefix (Whip adds it automatically).
+         *
+         * @param array<string> $headers Custom header names
+         */
+        $customHeaders = apply_filters('wonolog_ip_custom_headers', []);
+
+        if (!\is_array($customHeaders)) {
+            $customHeaders = [];
+        }
+
+        try {
+            $whip = new Whip($methods, $whitelists);
+
+            // Add custom headers if CUSTOM_HEADERS method is enabled
+            if (($methods & Whip::CUSTOM_HEADERS) && [] !== $customHeaders) {
+                foreach ($customHeaders as $customHeader) {
+                    if (\is_string($customHeader) && '' !== $customHeader) {
+                        $whip->addCustomHeader($customHeader);
+                    }
+                }
+            }
+
+            $ip = $whip->getValidIpAddress();
+
+            if (false === $ip) {
+                return ['ip' => '0.0.0.0', 'source' => 'unknown'];
+            }
+
+            // Whip doesn't expose which method was used, so we detect it manually
+            $source = $this->detectIpSource($ip, $methods, $customHeaders);
+
+            return [
+                'ip' => $ip,
+                'source' => $source,
+            ];
+        } catch (\Exception $exception) {
+            error_log('Wonolog: Error detecting IP - '.$exception->getMessage());
+
+            return ['ip' => '0.0.0.0', 'source' => 'error'];
+        }
+    }
+
+    /**
+     * Detect which source was used for IP detection.
+     *
+     * Since Whip doesn't expose this information, we check headers manually.
+     *
+     * @param string        $detectedIp    The IP address detected by Whip
+     * @param int           $methods       The enabled methods bitmask
+     * @param array<string> $customHeaders Custom headers list
+     *
+     * @return string The source identifier
+     */
+    private function detectIpSource(string $detectedIp, int $methods, array $customHeaders): string
+    {
+        // Check custom headers first (highest priority in Whip's logic)
+        if (($methods & Whip::CUSTOM_HEADERS) && $customHeaders !== []) {
+            foreach ($customHeaders as $customHeader) {
+                $normalized = $this->normalizeHeaderName($customHeader);
+                if (!empty($_SERVER[$normalized])) {
+                    $headerIp = $this->extractFirstIp($_SERVER[$normalized]);
+                    if ($headerIp === $detectedIp) {
+                        return strtolower(str_replace('HTTP_', '', $normalized));
+                    }
+                }
+            }
+        }
+
+        // Check Incapsula headers
+        if (($methods & Whip::INCAPSULA_HEADERS) && !empty($_SERVER['HTTP_INCAP_CLIENT_IP'])) {
+            $headerIp = $this->extractFirstIp($_SERVER['HTTP_INCAP_CLIENT_IP']);
+            if ($headerIp === $detectedIp) {
+                return 'incap-client-ip';
+            }
+        }
+
+        // Check CloudFlare headers
+        if (($methods & Whip::CLOUDFLARE_HEADERS) && !empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+            $headerIp = $this->extractFirstIp($_SERVER['HTTP_CF_CONNECTING_IP']);
+            if ($headerIp === $detectedIp) {
+                return 'cf-connecting-ip';
+            }
+        }
+
+        // Check proxy headers
+        if (($methods & Whip::PROXY_HEADERS) !== 0) {
+            $proxyHeaders = [
+                'HTTP_CLIENT_IP' => 'client-ip',
+                'HTTP_X_FORWARDED_FOR' => 'x-forwarded-for',
+                'HTTP_X_FORWARDED' => 'x-forwarded',
+                'HTTP_X_CLUSTER_CLIENT_IP' => 'x-cluster-client-ip',
+                'HTTP_FORWARDED_FOR' => 'forwarded-for',
+                'HTTP_FORWARDED' => 'forwarded',
+                'HTTP_X_REAL_IP' => 'x-real-ip',
+            ];
+
+            foreach ($proxyHeaders as $serverKey => $name) {
+                if (!empty($_SERVER[$serverKey])) {
+                    $headerIp = $this->extractFirstIp($_SERVER[$serverKey]);
+                    if ($headerIp === $detectedIp) {
+                        return $name;
+                    }
+                }
+            }
+        }
+
+        // Check REMOTE_ADDR
+        if ($methods & Whip::REMOTE_ADDR && !empty($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR'] === $detectedIp) {
+            return 'remote-addr';
+        }
+
+        return 'detected';
+    }
+
+    /**
+     * Normalize header name to match $_SERVER format.
+     *
+     * @param string $header Header name
+     *
+     * @return string Normalized header name
+     */
+    private function normalizeHeaderName(string $header): string
+    {
+        // If already in HTTP_ format, return as-is
+        if (str_starts_with($header, 'HTTP_')) {
+            return strtoupper($header);
+        }
+
+        // Convert header name to HTTP_ format
+        return 'HTTP_'.str_replace('-', '_', strtoupper($header));
+    }
+
+    /**
+     * Extract first IP from a comma-separated list.
+     *
+     * @param string $value Header value
+     *
+     * @return string First IP address
+     */
+    private function extractFirstIp(string $value): string
+    {
+        $list = explode(',', $value);
+
+        return trim($list[0]);
     }
 }

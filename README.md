@@ -300,6 +300,103 @@ add_filter('wonolog_ignore_patterns', function(array $patterns): array {
 });
 ```
 
+#### IP Detection Configuration
+
+Wonolog uses [Vectorface/whip](https://github.com/Vectorface/whip) for robust IP detection. Configure it using these filters:
+
+**1. Configure detection methods** (default: `Whip::ALL_METHODS`):
+
+```php
+use WpSpaghetti\Deps\Vectorface\Whip\Whip;
+
+// Example 1: Only trust Cloudflare and direct connection (recommended for Cloudflare sites)
+add_filter('wonolog_ip_detection_methods', function(): int {
+    return Whip::CLOUDFLARE_HEADERS | Whip::REMOTE_ADDR;
+});
+
+// Example 2: For sites behind standard reverse proxy (Nginx, Traefik)
+add_filter('wonolog_ip_detection_methods', function(): int {
+    return Whip::PROXY_HEADERS | Whip::REMOTE_ADDR;
+});
+
+// Example 3: Direct connection only (no proxy trust)
+add_filter('wonolog_ip_detection_methods', function(): int {
+    return Whip::REMOTE_ADDR;
+});
+
+// Example 4: Use default (try all methods - suitable for most cases)
+// No filter needed - Whip::ALL_METHODS is the default
+```
+
+**2. Add custom proxy headers** (for non-standard proxies):
+
+```php
+add_filter('wonolog_ip_custom_headers', function(): array {
+    return [
+        'X-Real-IP',              // Nginx, Traefik
+        'X-My-Custom-IP-Header',  // Your custom proxy
+    ];
+});
+
+// Don't forget to enable CUSTOM_HEADERS method:
+add_filter('wonolog_ip_detection_methods', function(): int {
+    return Whip::CUSTOM_HEADERS | Whip::REMOTE_ADDR;
+});
+```
+
+**3. Whitelist trusted proxy IPs** (advanced - for security):
+
+```php
+add_filter('wonolog_ip_whitelists', function(): array {
+    return [
+        // Only trust Cloudflare IPs for CF-Connecting-IP header
+        Whip::CLOUDFLARE_HEADERS => [
+            Whip::IPV4 => [
+                '199.27.128.0/21',
+                '173.245.48.0/20',
+                '103.21.244.0/22',
+                // ... full Cloudflare IP list
+            ],
+            Whip::IPV6 => [
+                '2400:cb00::/32',
+                '2606:4700::/32',
+                // ... full Cloudflare IPv6 list
+            ]
+        ],
+        
+        // Only trust your load balancer for X-Forwarded-For
+        Whip::PROXY_HEADERS => [
+            Whip::IPV4 => [
+                '10.0.0.1',      // Your load balancer IP
+                '10.0.0.2',
+            ]
+        ]
+    ];
+});
+```
+
+**Available Whip Methods** (combine with `|` operator):
+
+| Constant | Description | Headers Used |
+|----------|-------------|--------------|
+| `Whip::REMOTE_ADDR` | Direct connection IP | `$_SERVER['REMOTE_ADDR']` |
+| `Whip::CLOUDFLARE_HEADERS` | Cloudflare's header | `CF-Connecting-IP` |
+| `Whip::INCAPSULA_HEADERS` | Incapsula CDN | `Incap-Client-IP` |
+| `Whip::PROXY_HEADERS` | Standard proxy headers | `X-Forwarded-For`, `X-Real-IP`, etc. |
+| `Whip::CUSTOM_HEADERS` | Your custom headers | Headers from `wonolog_ip_custom_headers` |
+| `Whip::ALL_METHODS` | Try all methods (default) | All of the above |
+
+**Security Notes**:
+- **Default (`ALL_METHODS`)**: Suitable for most sites, tries methods in priority order
+- **`PROXY_HEADERS` risk**: Headers like `X-Forwarded-For` can be spoofed by clients if you're not behind a trusted proxy
+- **Whitelisting**: Use `wonolog_ip_whitelists` to only trust specific proxy IPs
+- **No proxy**: Use only `REMOTE_ADDR` if not behind any proxy
+
+**Log Output**: The detected IP and its source are automatically logged:
+- `client_ip` - The detected IP address
+- `client_ip_source` - Which header/method was used (e.g., "cf-connecting-ip", "remote-addr")
+- `hostbyaddr` - Reverse DNS lookup (when available)
+
 ## Use Cases
 
 ### 1. E-commerce Site Error Monitoring
@@ -405,6 +502,195 @@ class APIClient {
 }
 ```
 
+### 5. Security Monitoring with Trusted Proxy Configuration
+
+```php
+// wp-config.php or mu-plugin
+
+use WpSpaghetti\Deps\Vectorface\Whip\Whip;
+
+// Example 1: Site behind Cloudflare only
+add_filter('wonolog_ip_detection_methods', function(): int {
+    return Whip::CLOUDFLARE_HEADERS | Whip::REMOTE_ADDR;
+});
+
+// Optional: Whitelist only Cloudflare IPs for extra security
+add_filter('wonolog_ip_whitelists', function(): array {
+    return [
+        Whip::CLOUDFLARE_HEADERS => [
+            Whip::IPV4 => [
+                '199.27.128.0/21',
+                '173.245.48.0/20',
+                '103.21.244.0/22',
+                '103.22.200.0/22',
+                '103.31.4.0/22',
+                '141.101.64.0/18',
+                '108.162.192.0/18',
+                '190.93.240.0/20',
+                '188.114.96.0/20',
+                '197.234.240.0/22',
+                '198.41.128.0/17',
+                '162.158.0.0/15',
+                '104.16.0.0/12'
+            ],
+            Whip::IPV6 => [
+                '2400:cb00::/32',
+                '2606:4700::/32',
+                '2803:f800::/32',
+                '2405:b500::/32',
+                '2405:8100::/32'
+            ]
+        ]
+    ];
+});
+
+// Example 2: Site behind AWS ALB (no Cloudflare)
+add_filter('wonolog_ip_detection_methods', function(): int {
+    return Whip::PROXY_HEADERS | Whip::REMOTE_ADDR;
+});
+
+// Whitelist your ALB IP addresses
+add_filter('wonolog_ip_whitelists', function(): array {
+    return [
+        Whip::PROXY_HEADERS => [
+            Whip::IPV4 => [
+                '10.0.1.0/24',  // Your ALB subnet
+            ]
+        ]
+    ];
+});
+
+// Example 3: Custom proxy setup (Nginx with X-Real-IP)
+add_filter('wonolog_ip_detection_methods', function(): int {
+    return Whip::CUSTOM_HEADERS | Whip::REMOTE_ADDR;
+});
+
+add_filter('wonolog_ip_custom_headers', function(): array {
+    return ['X-Real-IP'];
+});
+
+add_filter('wonolog_ip_whitelists', function(): array {
+    return [
+        Whip::CUSTOM_HEADERS => [
+            Whip::IPV4 => ['192.168.1.1']  // Your Nginx server
+        ]
+    ];
+});
+
+// Example 4: Monitor failed login attempts with real client IP
+add_action('wp_login_failed', function(string $username) {
+    do_action('wonolog.log.warning', [
+        'message' => 'Failed login attempt',
+        'channel' => \WpSpaghetti\Deps\Inpsyde\Wonolog\Channels::SECURITY,
+        'context' => [
+            'username' => $username,
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+            // client_ip and client_ip_source are automatically added by Wonolog
+        ],
+    ]);
+});
+
+// Example 5: Rate limiting by IP using Whip directly
+add_action('rest_api_init', function() {
+    // Create Whip instance matching your configuration
+    $whip = new Whip(Whip::CLOUDFLARE_HEADERS | Whip::REMOTE_ADDR);
+    $ip = $whip->getValidIpAddress();
+    
+    if ($ip) {
+        $transient_key = 'api_rate_limit_' . md5($ip);
+        $count = (int) get_transient($transient_key);
+        
+        if ($count > 100) {
+            do_action('wonolog.log.error', [
+                'message' => 'API rate limit exceeded',
+                'context' => [
+                    'ip' => $ip,
+                    'requests' => $count,
+                ],
+            ]);
+            
+            wp_send_json_error(['message' => 'Rate limit exceeded'], 429);
+        }
+        
+        set_transient($transient_key, $count + 1, MINUTE_IN_SECONDS);
+    }
+});
+
+// Example 6: Block requests from specific IP ranges
+add_action('init', function() {
+    $whip = new Whip();
+    $ip = $whip->getValidIpAddress();
+    
+    if (!$ip) {
+        return;
+    }
+    
+    // Check if IP is in blocked range
+    $blockedRange = new \WpSpaghetti\Deps\Vectorface\Whip\IpRange\Ipv4Range('192.0.2.0/24');
+    
+    if ($blockedRange->containsIp($ip)) {
+        do_action('wonolog.log.critical', [
+            'message' => 'Blocked IP range access attempt',
+            'context' => [
+                'ip' => $ip,
+                'requested_url' => $_SERVER['REQUEST_URI'] ?? 'unknown',
+            ],
+        ]);
+        
+        wp_die('Access denied', 'Forbidden', ['response' => 403]);
+    }
+});
+
+// Example 7: Monitor suspicious activity from flagged IPs
+add_filter('wonolog.log-data-context', function(array $context, $log): array {
+    $suspiciousIps = ['192.0.2.1', '198.51.100.1'];
+    
+    if (isset($context['client_ip']) && in_array($context['client_ip'], $suspiciousIps, true)) {
+        // Add flag to context
+        $context['flagged_ip'] = true;
+        
+        // Escalate to critical
+        do_action('wonolog.log.critical', [
+            'message' => 'Activity from flagged IP detected',
+            'context' => [
+                'original_message' => $log->message(),
+                'client_ip' => $context['client_ip'],
+                'client_ip_source' => $context['client_ip_source'] ?? 'unknown',
+            ],
+        ]);
+    }
+    
+    return $context;
+}, 10, 2);
+```
+
+**Why Whip with Whitelisting?**
+- **Security**: Only trusts IPs from your actual infrastructure
+- **Spoofing Prevention**: Headers from non-whitelisted sources are ignored
+- **Flexibility**: Easy to update when adding/removing proxies
+- **Reliability**: Handles edge cases and malformed headers gracefully
+
+**Common Infrastructure Patterns**:
+
+| Setup | Detection Methods | Whitelist |
+|-------|------------------|-----------|
+| Direct (no proxy) | `REMOTE_ADDR` | Not needed |
+| Behind Cloudflare | `CLOUDFLARE_HEADERS \| REMOTE_ADDR` | Cloudflare IP ranges |
+| Behind AWS ALB | `PROXY_HEADERS \| REMOTE_ADDR` | ALB subnet IPs |
+| Behind Nginx | `CUSTOM_HEADERS \| REMOTE_ADDR` | Nginx server IP |
+| CF + ALB | `CLOUDFLARE_HEADERS \| PROXY_HEADERS \| REMOTE_ADDR` | Both CF and ALB IPs |
+| Behind Incapsula | `INCAPSULA_HEADERS \| REMOTE_ADDR` | Incapsula IP ranges |
+
+**Getting Proxy IP Lists**:
+- **Cloudflare**: [IPv4](https://www.cloudflare.com/ips-v4) / [IPv6](https://www.cloudflare.com/ips-v6)
+- **AWS**: Check your VPC subnet configuration
+- **Your Infrastructure**: Use `$_SERVER['REMOTE_ADDR']` to see proxy IPs
+
+**Log Output**:
+- `client_ip`: Validated client IP address
+- `client_ip_source`: Which header was used (e.g., "cf-connecting-ip", "remote-addr")
+- `hostbyaddr`: Reverse DNS lookup (when available)
+
 ## Log Levels
 
 The plugin uses standard PSR-3 log levels:
@@ -429,6 +715,10 @@ See [Wonolog's documentation on log handlers](https://inpsyde.github.io/Wonolog/
 ## Dependencies
 
 This plugin uses [WP Env](https://github.com/wp-spaghetti/wp-env) for reliable environment detection and configuration management. All environment-related features (development/staging/production detection, Docker detection, configuration loading) are powered by WP Env.
+
+**IP Detection**: Uses [Vectorface/whip](https://github.com/Vectorface/whip) for robust and secure client IP detection with proxy header validation. Whip provides battle-tested protection against IP spoofing and supports various proxy configurations (Cloudflare, AWS ALB, Nginx, custom proxies, etc.).
+
+**All dependencies are scoped** via [wpify/scoper](https://github.com/wpify/scoper) to prevent conflicts with other plugins, ensuring the plugin works reliably in any WordPress environment.
 
 ## Recommended Packages
 
