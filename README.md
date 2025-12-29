@@ -75,7 +75,7 @@ If you use Composer to manage WordPress plugins, you can install it from [WordPr
 {
     "require": {
         "composer/installers": "^1.0 || ^2.0",
-        "wpackagist-plugin/wonolog": "^0.1"
+        "wpackagist-plugin/wonolog": "^0.2"
     },
     "extra": {
         "installer-paths": {
@@ -113,17 +113,17 @@ If you use Composer to manage WordPress plugins, you can install it from this re
 {
     "require": {
         "composer/installers": "^1.0 || ^2.0",
-        "wp-spaghetti/wonolog": "^0.1"
+        "wp-spaghetti/wonolog": "^0.2"
     },
     "repositories": [
         {
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/wonolog",
-                "version": "0.1.0",
+                "version": "0.2.0",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.1.0/wonolog.zip",
+                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.2.0/wonolog.zip",
                     "type": "zip"
                 }
             }
@@ -147,17 +147,17 @@ For installations that need updates managed via Git instead of WordPress.org, us
 {
     "require": {
         "composer/installers": "^1.0 || ^2.0",
-        "wp-spaghetti/wonolog": "^0.1"
+        "wp-spaghetti/wonolog": "^0.2"
     },
     "repositories": [
         {
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/wonolog",
-                "version": "0.1.0",
+                "version": "0.2.0",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.1.0/wonolog--with-git-updater.zip",
+                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.2.0/wonolog--with-git-updater.zip",
                     "type": "zip"
                 }
             }
