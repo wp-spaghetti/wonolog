@@ -3,8 +3,8 @@
 ## Getting Help
 
 - 📖 Read the [documentation](../README.md)
-- 💬 Start a [discussion](https://github.com/wp-spaghetti/wp-boot/discussions)
-- 🐛 Report bugs via [issues](https://github.com/wp-spaghetti/wp-boot/issues)
+- 💬 Start a [discussion](https://github.com/wp-spaghetti/wonolog/discussions)
+- 🐛 Report bugs via [issues](https://github.com/wp-spaghetti/wonolog/issues)
 
 ## Community
 
