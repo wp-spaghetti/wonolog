@@ -109,7 +109,7 @@ jobs:
 
       - name: Create Release
         if: steps.semantic.outputs.new_release_published == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           # https://github.com/softprops/action-gh-release
           # Note that if you intend to run workflows on the release event (on: { release: { types: [published] } }),
