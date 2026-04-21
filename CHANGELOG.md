@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0](https://github.com/wp-spaghetti/wonolog/compare/v0.2.0...v0.3.0) (2026-04-21)
+
+### Features
+
+* add wokenv and prepare to new release ([1af3977](https://github.com/wp-spaghetti/wonolog/commit/1af3977b37806d3ba1b0c56ca5bdd9cdc2db9c77))
+* move from git-updater to PUC ([c3df70b](https://github.com/wp-spaghetti/wonolog/commit/c3df70b8bf19e259da7477e1e17e5c1761b4569a))
+
 ## [0.2.0](https://github.com/wp-spaghetti/wonolog/compare/v0.1.0...v0.2.0) (2025-12-29)
 
 ### Features
