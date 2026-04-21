@@ -28,10 +28,10 @@ namespace WpSpaghetti\Wonolog;
  * License: GPL-3.0-or-later
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html
  * Donate link: https://buymeacoff.ee/frugan
- * Update URI: https://git-updater.com
  */
 
 use WpSpaghetti\Deps\Inpsyde\Wonolog\Configurator;
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory; // @puc-remove
 
 if (!\defined('WPINC')) {
     exit;
@@ -51,3 +51,17 @@ add_action(Configurator::ACTION_SETUP, static function (Configurator $configurat
     $config = new Bootstrap();
     $config->configure($configurator);
 });
+
+// @puc-begin
+// Initialize Plugin Update Checker for automatic GitHub releases updates.
+// This block is only included in the --with-puc distribution (not WordPress.org).
+if (class_exists(PucFactory::class)) {
+    $updateChecker = PucFactory::buildUpdateChecker(
+        'https://github.com/wp-spaghetti/wonolog/',
+        __FILE__,
+        'wonolog'
+    );
+    $updateChecker->getVcsApi()->enableReleaseAssets('/wonolog--with-puc\.zip$/');
+}
+
+// @puc-end

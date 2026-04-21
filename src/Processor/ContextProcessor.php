@@ -26,7 +26,7 @@ use function WpSpaghetti\Deps\Safe\gethostname;
  */
 class ContextProcessor
 {
-    private IpDetectionService $ipDetectionService;
+    private readonly IpDetectionService $ipDetectionService;
 
     public function __construct(?IpDetectionService $ipDetectionService = null)
     {

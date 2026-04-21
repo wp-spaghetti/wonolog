@@ -37,19 +37,14 @@ class PatternService
         $patterns = $this->getIgnorePatterns();
 
         foreach ($patterns as $pattern) {
-            // If channel is null, don't pass it (let it default to ALL_CHANNELS)
-            if (null === $pattern['channel']) {
-                $configurator->withIgnorePattern(
-                    $pattern['pattern'],
-                    $pattern['level']
-                );
-            } else {
-                $configurator->withIgnorePattern(
-                    $pattern['pattern'],
-                    $pattern['level'],
-                    $pattern['channel']
-                );
-            }
+            // levelThreshold is EXCLUSIVE: a log is ignored only if log->level() < levelThreshold.
+            // e.g. to ignore INFO (200) pass NOTICE (250); pass null to ignore regardless of level.
+            // channels is variadic: empty array means all channels.
+            $configurator->withIgnorePattern(
+                $pattern['pattern'],
+                $pattern['levelThreshold'],
+                ...$pattern['channels']
+            );
         }
     }
 
@@ -91,31 +86,31 @@ class PatternService
     /**
      * Get default ignore patterns for common database errors.
      *
-     * @return array<int, array{pattern: string, level: null|int, channel: null|string}>
+     * @return array<int, array{pattern: string, levelThreshold: null|int, channels: array<string>}>
      */
     private function getDefaultIgnorePatterns(): array
     {
         return [
             [
                 'pattern' => "^Can't DROP '.+'; check that column/key exists$",
-                'level' => null,
-                'channel' => Channels::DB,
+                'levelThreshold' => null,
+                'channels' => [Channels::DB],
             ],
             [
                 'pattern' => '^Deadlock found when trying to get lock; try restarting transaction$',
-                'level' => null,
-                'channel' => Channels::DB,
+                'levelThreshold' => null,
+                'channels' => [Channels::DB],
             ],
             [
                 // https://wordpress.org/support/topic/database-error-duplicate-entry-lastnotificationid-for-key-primary/
                 'pattern' => "^Duplicate entry '.+' for key",
-                'level' => null,
-                'channel' => Channels::DB,
+                'levelThreshold' => null,
+                'channels' => [Channels::DB],
             ],
             [
                 'pattern' => "^Table '.+' doesn't exist$",
-                'level' => null,
-                'channel' => Channels::DB,
+                'levelThreshold' => null,
+                'channels' => [Channels::DB],
             ],
         ];
     }
@@ -125,7 +120,7 @@ class PatternService
      *
      * @param array<mixed> $patterns Raw patterns from config/filter
      *
-     * @return array<int, array{pattern: string, level: null|int, channel: null|string}>
+     * @return array<int, array{pattern: string, levelThreshold: null|int, channels: array<string>}>
      */
     private function validatePatterns(array $patterns): array
     {
@@ -147,10 +142,14 @@ class PatternService
                 continue;
             }
 
+            // Support both old singular 'channel' and new plural 'channels' key
+            $channelsRaw = $pattern['channels'] ?? (isset($pattern['channel']) ? [$pattern['channel']] : []);
+
             $validated[] = [
                 'pattern' => $pattern['pattern'],
-                'level' => $this->convertLevelToConstant($pattern['level'] ?? null),
-                'channel' => $this->convertChannelToConstant($pattern['channel'] ?? null),
+                // levelThreshold is EXCLUSIVE: log is ignored only if log->level() < levelThreshold
+                'levelThreshold' => $this->convertLevelToConstant($pattern['levelThreshold'] ?? $pattern['level'] ?? null),
+                'channels' => $this->convertChannelsToConstants(\is_array($channelsRaw) ? $channelsRaw : [$channelsRaw]),
             ];
         }
 
@@ -202,26 +201,37 @@ class PatternService
     }
 
     /**
-     * Convert channel string to constant.
+     * Convert channel strings to constants.
+     *
+     * @param array<mixed> $channels
+     *
+     * @return array<string>
      */
-    private function convertChannelToConstant(?string $channel): ?string
+    private function convertChannelsToConstants(array $channels): array
     {
-        if (\in_array($channel, [null, '', '0'], true)) {
-            return null;
+        $result = [];
+
+        foreach ($channels as $channel) {
+            if (\in_array($channel, [null, '', '0'], true)) {
+                continue;
+            }
+
+            if (!\is_string($channel)) {
+                continue;
+            }
+
+            $constantName = Channels::class.'::'.strtoupper($channel);
+
+            if (\defined($constantName)) {
+                $result[] = \constant($constantName);
+
+                continue;
+            }
+
+            // Custom channel names are used as-is
+            $result[] = $channel;
         }
 
-        $constantName = Channels::class.'::'.strtoupper($channel);
-
-        if (\defined($constantName)) {
-            return \constant($constantName);
-        }
-
-        // Use error_log, NOT do_action to avoid loops
-        error_log(\sprintf(
-            'Wonolog: Unknown channel "%s". Available channels in Wonolog\Channels class.',
-            $channel
-        ));
-
-        return null;
+        return $result;
     }
 }

@@ -35,13 +35,13 @@ use WpSpaghetti\Wonolog\Service\PatternService;
  */
 class Bootstrap
 {
-    private HandlerFactory $handlerFactory;
+    private readonly HandlerFactory $handlerFactory;
 
-    private ContextProcessor $contextProcessor;
+    private readonly ContextProcessor $contextProcessor;
 
-    private PatternService $patternService;
+    private readonly PatternService $patternService;
 
-    private ConfigurationService $configurationService;
+    private readonly ConfigurationService $configurationService;
 
     public function __construct(
         ?HandlerFactory $handlerFactory = null,

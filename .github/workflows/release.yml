@@ -69,41 +69,42 @@ jobs:
           # Remove dev dependencies but keep vendor-deps folder already generated
           composer install --optimize-autoloader --classmap-authoritative --no-dev --no-interaction
 
-      - name: Create version WITH Git Updater Lite
+      - name: Create version WITH PUC
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
-          echo "Creating version WITH Git Updater Lite for Composer installations"
-          mkdir -p build/wonolog
-          rsync -av --exclude-from=exclude.txt --include-from=include.txt ./ build/wonolog/
-          cd build/wonolog
-          zip -qr ../wonolog--with-git-updater.zip .
+          echo "Creating version WITH Plugin Update Checker"
+          mkdir -p dist/wonolog
+          rsync -av --exclude-from=exclude.txt --include-from=include.txt ./ dist/wonolog/
+          cd dist/wonolog
+          zip -qr ../wonolog--with-puc.zip .
           cd ../..
 
-      - name: Remove Git Updater Lite for WordPress.org compliance
+      - name: Remove PUC for WordPress.org compliance
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
-          echo "Removing git-updater-lite dependency for WordPress compliance"
-          composer remove afragen/git-updater-lite --update-no-dev --optimize-autoloader --classmap-authoritative --no-interaction
+          echo "Removing plugin-update-checker dependency for WordPress compliance"
+          composer remove yahnis-elsts/plugin-update-checker --update-no-dev --optimize-autoloader --classmap-authoritative --no-interaction
 
-      - name: Create version WITHOUT Git Updater Lite from updated root
+      - name: Create version WITHOUT PUC from updated root
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
           echo "Creating clean copy from root with updated composer.json"
-          rm -rf build/wonolog
-          mkdir -p build/wonolog
-          rsync -av --exclude-from=exclude.txt --include-from=include.txt ./ build/wonolog/
+          rm -rf dist/wonolog
+          mkdir -p dist/wonolog
+          rsync -av --exclude-from=exclude.txt --include-from=include.txt ./ dist/wonolog/
 
-      - name: Remove Update URI header for WordPress compliance
+      - name: Remove PUC code block for WordPress.org compliance
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
-          echo "Removing Update URI header for WordPress compliance"
-          sed -i '/\* Update URI:/d' build/wonolog/wonolog.php
+          echo "Removing PUC block from wonolog.php for WordPress.org compliance"
+          sed -i '/@puc-remove/d' dist/wonolog/wonolog.php
+          sed -i '/@puc-begin/,/@puc-end/d' dist/wonolog/wonolog.php
 
-      - name: Create version WITHOUT Git Updater Lite
+      - name: Create version WITHOUT PUC
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
-          echo "Creating standard version WITHOUT Git Updater Lite for WordPress.org"
-          cd build/wonolog
+          echo "Creating standard version WITHOUT PUC for WordPress.org"
+          cd dist/wonolog
           zip -qr ../wonolog.zip .
           cd ../..
 
@@ -118,6 +119,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ steps.semantic.outputs.new_release_version }}
           files: |
-            build/wonolog.zip
-            build/wonolog--with-git-updater.zip
+            dist/wonolog.zip
+            dist/wonolog--with-puc.zip
           generate_release_notes: true

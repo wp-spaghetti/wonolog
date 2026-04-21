@@ -35,7 +35,7 @@ class ConfigurationService
 
     private const DEFAULT_MAX_FILES = 10;
 
-    private const DEFAULT_FILE_PERMISSION = 0777;
+    private const DEFAULT_FILE_PERMISSION = 0o777;
 
     /**
      * Get email notification level.
@@ -49,7 +49,7 @@ class ConfigurationService
         }
 
         // Try to convert string to constant
-        $constantName = LogLevel::class.'::'.strtoupper($level);
+        $constantName = LogLevel::class.'::'.strtoupper((string) $level);
 
         if (\defined($constantName)) {
             return \constant($constantName);

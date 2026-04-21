@@ -31,7 +31,7 @@ use WpSpaghetti\WpEnv\Environment;
  */
 class HandlerFactory
 {
-    private ConfigurationService $configurationService;
+    private readonly ConfigurationService $configurationService;
 
     public function __construct(?ConfigurationService $configurationService = null)
     {

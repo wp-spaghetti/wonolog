@@ -35,6 +35,6 @@ return RectorConfig::configure()
         SetList::INSTANCEOF,
         SetList::EARLY_RETURN,
         SetList::STRICT_BOOLEANS,
-        LevelSetList::UP_TO_PHP_80,
+        LevelSetList::UP_TO_PHP_81,
     ])
 ;

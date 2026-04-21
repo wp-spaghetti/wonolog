@@ -46,7 +46,7 @@ class SecurityHelper
             $server,
             static fn ($key): bool => !array_reduce(
                 $patterns,
-                static fn ($carry, $pattern): bool => $carry || false !== stripos($key, $pattern),
+                static fn ($carry, $pattern): bool => $carry || false !== stripos((string) $key, $pattern),
                 false
             ),
             ARRAY_FILTER_USE_KEY

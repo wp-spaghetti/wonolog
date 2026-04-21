@@ -48,7 +48,7 @@ If you need full control over logging configuration, use [Inpsyde's Wonolog](htt
 
 ## Installation
 
-You can install the plugin in three ways: manually, via Composer from [WPackagist](https://wpackagist.org), or via Composer from [GitHub Releases](../../releases).
+You can install the plugin in three ways: manually, via Composer from [WP Packages](https://wp-packages.org), or via Composer from [GitHub Releases](../../releases).
 
 <details>
 <summary>Manual Installation</summary>
@@ -63,9 +63,9 @@ You can install the plugin in three ways: manually, via Composer from [WPackagis
 </details>
 
 <details>
-<summary>Installation via Composer from WPackagist</summary>
+<summary>Installation via Composer from WP Packages</summary>
 
-If you use Composer to manage WordPress plugins, you can install it from [WordPress Packagist](https://wpackagist.org):
+If you use Composer to manage WordPress plugins, you can install it from [WP Packages](https://wp-packages.org):
 
 1. Open your terminal.
 2. Navigate to the root directory of your WordPress installation.
@@ -75,8 +75,15 @@ If you use Composer to manage WordPress plugins, you can install it from [WordPr
 {
     "require": {
         "composer/installers": "^1.0 || ^2.0",
-        "wpackagist-plugin/wonolog": "^0.2"
+        "wpackagist-plugin/wonolog": "^0.3"
     },
+    "repositories": [
+        {
+            "name": "wp-packages",
+            "type": "composer",
+            "url": "https://repo.wp-packages.org"
+        }
+    ],
     "extra": {
         "installer-paths": {
             "wp-content/plugins/{$name}/": [
@@ -113,17 +120,17 @@ If you use Composer to manage WordPress plugins, you can install it from this re
 {
     "require": {
         "composer/installers": "^1.0 || ^2.0",
-        "wp-spaghetti/wonolog": "^0.2"
+        "wp-spaghetti/wonolog": "^0.3"
     },
     "repositories": [
         {
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/wonolog",
-                "version": "0.2.0",
+                "version": "0.3.0",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.2.0/wonolog.zip",
+                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.3.0/wonolog.zip",
                     "type": "zip"
                 }
             }
@@ -139,25 +146,25 @@ If you use Composer to manage WordPress plugins, you can install it from this re
 }
 ```
 
-**Version with Git Updater** (uses Git Updater Lite for updates):
+**Version with Plugin Update Checker** (uses PUC for updates via GitHub):
 
-For installations that need updates managed via Git instead of WordPress.org, use the `--with-git-updater` version:
+For installations that need updates managed via GitHub instead of WordPress.org, use the `--with-puc` version:
 
 ```json
 {
     "require": {
         "composer/installers": "^1.0 || ^2.0",
-        "wp-spaghetti/wonolog": "^0.2"
+        "wp-spaghetti/wonolog": "^0.3"
     },
     "repositories": [
         {
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/wonolog",
-                "version": "0.2.0",
+                "version": "0.3.0",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.2.0/wonolog--with-git-updater.zip",
+                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.3.0/wonolog--with-puc.zip",
                     "type": "zip"
                 }
             }
@@ -182,7 +189,7 @@ composer update
 <sub><i>
 _Note:_  
 _* `composer/installers` might already be required by another dependency._  
-_* The `--with-git-updater` version includes [Git Updater Lite](https://github.com/afragen/git-updater-lite) for automatic updates detection, while the standard version relies on WordPress.org update system._
+_* The `--with-puc` version includes [Plugin Update Checker](https://github.com/YahnisElsts/plugin-update-checker) for automatic update detection from GitHub releases, while the standard version relies on the WordPress.org update system._
 </i></sub>
 </details>
 
