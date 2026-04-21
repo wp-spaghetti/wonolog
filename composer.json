@@ -1,6 +1,6 @@
 {
   "name": "wp-spaghetti/wonolog",
-  "description": "",
+  "description": "An opinionated WordPress logging plugin built on top of Inpsyde's Wonolog",
   "license": "GPL-3.0-or-later",
   "type": "wordpress-plugin",
   "keywords": [
