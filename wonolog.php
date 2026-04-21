@@ -17,13 +17,13 @@ namespace WpSpaghetti\Wonolog;
  * Plugin Name: Wonolog
  * Plugin URI: https://github.com/wp-spaghetti/wonolog
  * Description: Opinionated WordPress logging plugin built on top of Inpsyde's Wonolog
- * Version: 0.1.0
+ * Version: 0.3.0
  * Text Domain: wonolog
  * Domain Path: /languages
  * Author: Frugan
  * Author URI: https://github.com/wp-spaghetti
  * Requires at least: 6.0
- * Tested up to: 6.8
+ * Tested up to: 6.9
  * Requires PHP: 8.1
  * License: GPL-3.0-or-later
  * License URI: http://www.gnu.org/licenses/gpl-3.0.html

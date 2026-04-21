@@ -1,7 +1,21 @@
-# Composer
+# Dependencies
 /vendor*/
+/venv/
 composer*.lock
 
-# Claude
+# Build
+/dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swo
+*.swp
+*~
+
+# Other
 /.claude*
-/venv

@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/wokenv/wokenv/main/schemas/wokenv-schema.json
+
+# Wokenv Configuration
+# This file is safe to commit to version control
+
+# Wokenv version for this project
+# Used for backward compatibility and migration alerts
+version: "0.2.0"
+
+# Project metadata
+project:
+  type: plugin
+  slug: wonolog
+
+# Docker image configuration
+image:
+  # Option 1: Specify components (recommended)
+  node: 22       # Node.js version: 18, 20, 22
+  variant: alpine # Base variant: alpine, bookworm, trixie
+  wpenv: 10      # wp-env major version
+
+  # Option 2: Specify full tag directly (overrides above)
+  # tag: frugan/wokenv:node20-alpine-wpenv10

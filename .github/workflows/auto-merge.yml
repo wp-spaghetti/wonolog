@@ -43,7 +43,38 @@ jobs:
         if: fromJSON(steps.pr.outputs.result).shouldMerge
         run: |
           gh pr review ${{ github.event.pull_request.number }} --approve --body "Auto-approving dependency update"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for checks (with timeout)
+        if: fromJSON(steps.pr.outputs.result).shouldMerge
+        uses: fountainhead/action-wait-for-check@v1.2.0
+        id: wait-for-checks
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          checkName: 'Tests (PHP 8.4)'
+          ref: ${{ github.event.pull_request.head.sha }}
+          timeoutSeconds: 600
+        continue-on-error: true
+
+      - name: Check status and merge
+        if: fromJSON(steps.pr.outputs.result).shouldMerge
+        run: |
+          # Get current status
+          STATUS=$(gh pr status ${{ github.event.pull_request.number }} --json statusCheckRollup --jq '.statusCheckRollup[] | select(.name == "Tests (PHP 8.4)") | .conclusion')
+          
+          echo "Check status: $STATUS"
+          
+          if [ "$STATUS" = "SUCCESS" ] || [ "$STATUS" = "NEUTRAL" ]; then
+            echo "✅ Checks passed, merging PR"
+            gh pr merge ${{ github.event.pull_request.number }} --squash --auto
+          elif [ "$STATUS" = "FAILURE" ]; then
+            echo "❌ Checks failed, not merging"
+            exit 1
+          else
+            echo "⏳ Checks still running or unknown status, enabling auto-merge"
           gh pr merge ${{ github.event.pull_request.number }} --squash --auto
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

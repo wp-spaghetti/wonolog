@@ -8,6 +8,7 @@
 + vendor-deps/**
 + composer-deps.json
 + composer.json
++ LICENSE
 + readme.txt
 + wonolog.php
 - *
