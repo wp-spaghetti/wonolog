@@ -44,5 +44,14 @@ function customize_php_scoper_config(array $config): array
         return $content;
     };
 
+    // Expose user-facing constants so they are not prefixed
+    $config['expose-constants'] = array_merge(
+        $config['expose-constants'] ?? [],
+        [
+            'WONOLOG_DISABLE',
+            'WONOLOG_DEFAULT_MIN_LEVEL',
+        ]
+    );
+
     return $config;
 }

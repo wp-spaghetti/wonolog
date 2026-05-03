@@ -127,10 +127,10 @@ If you use Composer to manage WordPress plugins, you can install it from this re
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/wonolog",
-                "version": "0.3.0",
+                "version": "0.3.1",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.3.0/wonolog.zip",
+                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.3.1/wonolog.zip",
                     "type": "zip"
                 }
             }
@@ -161,10 +161,10 @@ For installations that need updates managed via GitHub instead of WordPress.org,
             "type": "package",
             "package": {
                 "name": "wp-spaghetti/wonolog",
-                "version": "0.3.0",
+                "version": "0.3.1",
                 "type": "wordpress-plugin",
                 "dist": {
-                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.3.0/wonolog--with-puc.zip",
+                    "url": "https://github.com/wp-spaghetti/wonolog/releases/download/v0.3.1/wonolog--with-puc.zip",
                     "type": "zip"
                 }
             }
@@ -806,7 +806,7 @@ add_action('init', function() {
 
 ## More info
 
-See [LINKS](docs/LINKS.md) file.
+See [here](docs/README.md).
 
 ## Changelog
 

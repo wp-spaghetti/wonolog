@@ -17,7 +17,7 @@ namespace WpSpaghetti\Wonolog;
  * Plugin Name: Wonolog
  * Plugin URI: https://github.com/wp-spaghetti/wonolog
  * Description: Opinionated WordPress logging plugin built on top of Inpsyde's Wonolog
- * Version: 0.3.0
+ * Version: 0.3.1
  * Text Domain: wonolog
  * Domain Path: /languages
  * Author: Frugan

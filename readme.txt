@@ -1,7 +1,7 @@
 === Wonolog ===
 Contributors: Frugan
 Tags: logger, logging, monolog, wonolog, psr-3, 
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 8.1
