@@ -72,7 +72,6 @@ return static function (RectorConfig $rectorConfig) use ($safeConfig): void {
         SetList::NAMING,
         SetList::INSTANCEOF,
         SetList::EARLY_RETURN,
-        SetList::STRICT_BOOLEANS,
         LevelSetList::UP_TO_PHP_81,
     ]);
 };

@@ -25,31 +25,41 @@ class SecurityHelper
      */
     public static function getSensitivePatterns(): array
     {
-        $default = ['AUTH', 'DB_', 'DSN', 'KEY', 'PASSWORD', 'PRIVATE', 'SALT', 'SECRET', 'TOKEN'];
+        $default = ['AUTH', 'COOKIE', 'DB_', 'DSN', 'KEY', 'PASS', 'PRIVATE', 'PWD', 'SALT', 'SECRET', 'TOKEN'];
         $filtered = apply_filters('wonolog_sensitive_patterns', $default);
 
         return \is_array($filtered) ? $filtered : $default;
     }
 
     /**
-     * Filter $_SERVER array removing sensitive keys.
+     * Recursively remove sensitive keys (nested form fields, session data).
      *
-     * @param array<string, mixed> $server The $_SERVER array
+     * @param array<int|string, mixed> $data Data to filter
      *
-     * @return array<string, mixed> Filtered server data
+     * @return array<int|string, mixed> Filtered data
      */
-    public static function filterServerData(array $server): array
+    public static function filterSensitiveData(array $data): array
     {
         $patterns = self::getSensitivePatterns();
 
-        return array_filter(
-            $server,
-            static fn ($key): bool => !array_reduce(
-                $patterns,
-                static fn ($carry, $pattern): bool => $carry || false !== stripos((string) $key, $pattern),
-                false
-            ),
-            ARRAY_FILTER_USE_KEY
+        $isSensitive = static fn (int|string $key): bool => array_reduce(
+            $patterns,
+            static fn ($carry, $pattern): bool => $carry || false !== stripos((string) $key, (string) $pattern),
+            false
         );
+
+        $filter = static function (array $data) use (&$filter, $isSensitive): array {
+            $data = array_filter($data, static fn ($key): bool => !$isSensitive($key), ARRAY_FILTER_USE_KEY);
+
+            foreach ($data as $key => $value) {
+                if (\is_array($value)) {
+                    $data[$key] = $filter($value);
+                }
+            }
+
+            return $data;
+        };
+
+        return $filter($data);
     }
 }

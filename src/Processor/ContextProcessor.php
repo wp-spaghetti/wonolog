@@ -73,18 +73,17 @@ class ContextProcessor
         $hostname = $this->getHostname();
         $ipData = $this->ipDetectionService->getClientIp();
         $hostbyaddr = $this->getHostByAddr($ipData['ip']);
-        $filteredServer = SecurityHelper::filterServerData($_SERVER);
 
         return [
             'client_ip' => $ipData['ip'],
             'client_ip_source' => $ipData['source'],
             'hostname' => $hostname,
             'hostbyaddr' => $hostbyaddr,
-            '_REQUEST' => $_REQUEST,
-            '_POST' => $_POST,
+            '_REQUEST' => SecurityHelper::filterSensitiveData($_REQUEST),
+            '_POST' => SecurityHelper::filterSensitiveData($_POST),
             '_FILES' => $_FILES,
-            '_SESSION' => $_SESSION ?? null,
-            '_SERVER' => $filteredServer,
+            '_SESSION' => isset($_SESSION) ? SecurityHelper::filterSensitiveData($_SESSION) : null,
+            '_SERVER' => SecurityHelper::filterSensitiveData($_SERVER),
         ];
     }
 
