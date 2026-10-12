@@ -40,14 +40,14 @@ jobs:
         with:
           # https://github.com/semantic-release/commit-analyzer/issues/65
           # https://github.com/romap0/semantic-release-unsquash/issues/7
+          # conventional-changelog-conventionalcommits pinned to 9.x: 10.x requires conventional-changelog-writer@9,
+          # while @semantic-release/release-notes-generator still depends on writer@8
           extra_plugins: |
             @semantic-release/commit-analyzer@latest
             @semantic-release/release-notes-generator@latest
             @semantic-release/changelog@latest
             @semantic-release/git@latest
             @semantic-release/github@latest
-            # Pinned to 9.x: 10.x requires conventional-changelog-writer@9,
-            # while @semantic-release/release-notes-generator still depends on writer@8
             conventional-changelog-conventionalcommits@9
         env:
           # Use the token with bypass permissions
