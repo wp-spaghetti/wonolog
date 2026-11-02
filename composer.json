@@ -40,7 +40,7 @@
     "ergebnis/composer-normalize": "^2.48",
     "friendsofphp/php-cs-fixer": "^3.89",
     "rector/rector": "^2.2",
-    "wpify/scoper": "^3.2"
+    "wpify/scoper": "^4.0"
   },
   "autoload": {
     "psr-4": {
